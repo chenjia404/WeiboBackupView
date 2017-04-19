@@ -14,7 +14,7 @@
     </style>
 </head>
 <body>
-<button onclick="get_weibo()">翻页</button>
+<button onclick="get_weibo()">下一页</button>
 <div id="weibo_page">
     <div class="weibo" v-for="weibo in weibos">
         <span>{{weibo.text}}</span>
@@ -72,7 +72,7 @@
 <script>
     uid = "3261134763";
     weibo_index = "";
-    weibos = null;
+    weibos = new Array();
     function index() {
         $.ajax({
             url: "data/" + uid + "/index.json",
@@ -107,14 +107,29 @@
         user();
         setTimeout(get_weibo,3*1000);
     });
-    function get_index() {
-        index()
-    }
-    function show_index() {
-        alert(weibo_index)
-    }
+
+    //每页数量
+    var page_count = 10;
+
+    //偏移量
+    var offset=0;
 
     function get_weibo() {
+        //还有微博，不用读取
+        if(offset > 0)
+        {
+            vm.weibos = new Array();
+            var min_i = offset - page_count;
+            for (var i = (offset-1); i >= 0 && i>=min_i; i--) {
+                weibos.weibos[i].user = users[weibos.weibos[i]];
+                if (weibos.weibos[i].retweeted_status) {
+                    weibos.weibos[i].retweeted_status.user = users[weibos.weibos[i].retweeted_status.user];
+                }
+                vm.weibos.push(weibos.weibos[i]);
+                offset = i;
+            }
+            return;
+        }
         $.ajax({
             url: "data/" + uid + "/" + weibo_index + ".json",
             type: "get",
@@ -123,12 +138,13 @@
             success: function (result) {
                 weibos = result;
                 vm.weibos = new Array();
-                for (var i = 0; i < weibos.weibos.length; i++) {
+                for (var i = (weibos.weibos.length-1); i >= 0 && i >= (weibos.weibos.length-page_count); i--) {
                     weibos.weibos[i].user = users[weibos.weibos[i].user];
                     if (weibos.weibos[i].retweeted_status) {
                         weibos.weibos[i].retweeted_status.user = users[weibos.weibos[i].retweeted_status.user];
                     }
-                    vm.weibos.unshift(weibos.weibos[i]);
+                    vm.weibos.push(weibos.weibos[i]);
+                    offset = i;
                 }
                 weibo_index = weibos.parent;
             }
