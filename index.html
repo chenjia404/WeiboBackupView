@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>微博备份文件查看</title>
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="js/vue.js"></script>
+    <link href="css/typo.css">
+    <style>
+        .media-pic-list li {
+            display: inline;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+<button onclick="get_weibo()">翻页</button>
+<div id="weibo_page">
+    <div class="weibo" v-for="weibo in weibos">
+        <span>{{weibo.text}}</span>
+        <div v-if="weibo.pic_urls && weibo.pic_urls.length > 1" class="media-pic-list">
+            <ul>
+                <li v-for="pic in weibo.pic_urls">
+                    <a target="_blank" v-bind:href="pic.replace('thumbnail','large')">
+                        <img data-node="pic" data-act-type="hover" v-bind:data-preview-group="weibo.un_id"
+                             data-preview-src="1" v-bind:src="pic" class="loaded">
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div v-if="weibo.pic_urls && weibo.pic_urls.length == 1" class="media-pic">
+            <a target="_blank" v-bind:href="weibo.pic_urls[0].replace('thumbnail','large')">
+                <img height="180" data-node="pic" data-act-type="hover" v-bind:data-preview-group="weibo.un_id"
+                     data-preview-src="1" v-bind:src="weibo.pic_urls[0]" class="loaded">
+            </a>
+        </div>
+
+        <blockquote v-if="weibo.retweeted_status && weibo.retweeted_status.user" class="extend-content" data-act-type="hover">
+            <div class="inner">
+                <p class="weibo-original txt-l">
+                    <a target="_blank" v-bind:href="'http://weibo.wbdacdn.com/user/'+weibo.retweeted_status.user.idstr" class="">@{{weibo.retweeted_status.user.screen_name}}</a>：
+                    <span class="emotion" v-html="weibo.retweeted_status.text"></span>
+                </p>
+                <div v-if="weibo.retweeted_status.pic_urls && weibo.retweeted_status.pic_urls.length > 1"
+                     class="media-pic-list">
+                    <ul>
+                        <li v-for="pic in weibo.retweeted_status.pic_urls">
+                            <a target="_blank" v-bind:href="pic.replace('thumbnail','large')">
+                                <img data-preview-src="1" data-node="pic"
+                                     data-act-type="hover" v-bind:src="pic" class="loaded">
+                                <a/>
+                        </li>
+                    </ul>
+                </div>
+
+                <div v-if="weibo.retweeted_status.pic_urls && weibo.retweeted_status.pic_urls.length == 1"
+                     class="media-pic">
+                    <a target="_blank" v-bind:href="weibo.retweeted_status.pic_urls[0].replace('thumbnail','large')">
+                        <img height="180" data-node="pic" data-preview-src="1"
+                             v-bind:src="weibo.retweeted_status.pic_urls[0]" class="loaded"/>
+                        <a/>
+                </div>
+            </div>
+        </blockquote>
+        <br>
+        <span>{{weibo.source}}</span> <span>{{weibo.created_at}}</span>
+        <hr>
+    </div>
+</div>
+</body>
+<script>
+    uid = "3261134763";
+    weibo_index = "";
+    weibos = null;
+    function index() {
+        $.ajax({
+            url: "data/" + uid + "/index.json",
+            type: "get",
+            async: false,
+            dataType: "json",
+            success: function (result) {
+                weibo_index = result.index;
+            }
+        });
+    }
+
+    users = null;
+
+    function user() {
+        $.ajax({
+            url: "data/" + uid + "/user.json",
+            type: "get",
+            async: false,
+            dataType: "json",
+            success: function (result) {
+                users = result;
+            }
+        });
+    }
+</script>
+
+<!--演示代码 -->
+<script>
+    $(document).ready(function () {
+        index();
+        user();
+        setTimeout(get_weibo,3*1000);
+    });
+    function get_index() {
+        index()
+    }
+    function show_index() {
+        alert(weibo_index)
+    }
+
+    function get_weibo() {
+        $.ajax({
+            url: "data/" + uid + "/" + weibo_index + ".json",
+            type: "get",
+            async: false,
+            dataType: "json",
+            success: function (result) {
+                weibos = result;
+                vm.weibos = new Array();
+                for (var i = 0; i < weibos.weibos.length; i++) {
+                    weibos.weibos[i].user = users[weibos.weibos[i].user];
+                    if (weibos.weibos[i].retweeted_status) {
+                        weibos.weibos[i].retweeted_status.user = users[weibos.weibos[i].retweeted_status.user];
+                    }
+                    vm.weibos.unshift(weibos.weibos[i]);
+                }
+                weibo_index = weibos.parent;
+            }
+        });
+    }
+
+    var vm = new Vue({
+        el: '#weibo_page',
+        data: {
+            weibos: new Array()
+        }
+    });
+</script>
+</html>
